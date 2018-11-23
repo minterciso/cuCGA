@@ -1,0 +1,3 @@
+SUBDIRS=src
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+
