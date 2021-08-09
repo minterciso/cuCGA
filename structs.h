@@ -2,6 +2,8 @@
 #define __STRUCTS_H
 
 #include <stdio.h>
+#include <stdlib.h>
+
 #include "consts.h"
 
 typedef struct Lattice
@@ -12,9 +14,9 @@ typedef struct Lattice
 
 typedef struct Individual
 {
-  char rule[RULE_SIZE+1];
-  unsigned int fitness;  
+  Lattice lat[MAX_LATS];
+  char rule[RULE_SIZE];
+  unsigned int fitness;
 }Individual;
 
 #endif //__STRUCTS_H
-
