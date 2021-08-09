@@ -6,11 +6,11 @@
 #include <errno.h>
 #include <string.h>
 
-__device__ int bin2dec(char *binary);
+__device__ int d_bin2dec(char *binary);
 __device__ int executeCA(Individual* ind, Lattice *lat);
 __global__ void cgaKernel(Individual* d_pop, Lattice* d_lat);
 
-int __printErr(FILE *stream, cudaError_t error, char *string)
+int __printErr(FILE *stream, cudaError_t error, const char *string)
 {
   if(error != cudaSuccess)
   {
@@ -61,7 +61,7 @@ int cga(Individual *h_pop, Lattice* h_lat)
     dim3 grid(MAX_LATS);
     dim3 blocks(POPULATION);
     cgaKernel<<<grid,blocks>>>(d_pop,d_lat);
-    d_error = cudaThreadSynchronize();
+    d_error = cudaDeviceSynchronize();
     if(__printErr(stderr,d_error,"Kernel")!=0) return 1;
 
     //Copy back
@@ -93,7 +93,7 @@ int cga(Individual *h_pop, Lattice* h_lat)
   return 0;
 }
 
-__device__ int bin2dec(char *binary)
+__device__ int d_bin2dec(char *binary)
 {
   int num,i,bin;
   num = 0;
@@ -128,7 +128,7 @@ __device__ int executeCA(Individual* ind, Lattice lat)
         if(pos==LAT_SIZE)
           pos = 0;
       }
-      next[i] = ind->rule[bin2dec(bin)];
+      next[i] = ind->rule[d_bin2dec(bin)];
     }
     
     for(j=0;j<LAT_SIZE;j++){ if(lat.cells[j]!=next[j]) break;}
