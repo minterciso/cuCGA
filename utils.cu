@@ -1,18 +1,12 @@
 #include "utils.h"
-#include "consts.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <string.h>
 #include <math.h>
 #include <limits.h>
-#include <time.h>
-#include <string.h>
-#include <stdarg.h>
 
 void dec2bin(int decimal, char *bin, int size)
 {
-  int n=0;
   int remain;
   do
   {
@@ -20,6 +14,18 @@ void dec2bin(int decimal, char *bin, int size)
     decimal = decimal/2;
     bin[size--] = (remain==0?'0':'1');
   }while(decimal>0);
+}
+
+int bin2dec(char *bin, int size)
+{
+  int i,n,sum=0;
+
+  for(i=0;i<size;i++)
+  {
+    n = (bin[i]-'0') * pow(2,size-(i+1));
+    sum+=n;
+  }
+  return sum;
 }
 
 void hex2bin(char *hex, char *bin, int h_size, int b_size)
@@ -57,7 +63,7 @@ void bin2hex(char *hex, char *bin, int h_size, int b_size)
   for(i=0;i<h_size;i++)
   {
     dec = 0;
-    dec=bin2dec(&bin[pos]);
+    dec=bin2dec(&bin[pos],4);
     switch(dec)
     {
       case 0:  hex[i]='0';break;
@@ -81,63 +87,40 @@ void bin2hex(char *hex, char *bin, int h_size, int b_size)
   }
 }
 
-int bin2dec(char *binary)
-{
-  int num,i,bin;
-  num = 0;
-  int j=0;
-  for(i=RADIUS*2;i>=0;i--)
-  {
-    bin = (binary[i]=='0'?0:1);
-    num += bin*powf(2,j++);
-  }
-  return num;
-}
-
 int timeSeed(void)
 {
-    time_t now = time (NULL);
-    unsigned char *p = (unsigned char *)&now;
-    int seed = 0;
-    size_t i;
-    for ( i = 0; i < sizeof(now); i++ )
-      seed = seed * ( UCHAR_MAX + 2U ) + p[i];
-    return seed;
+  time_t now = time (NULL);
+  unsigned char *p = (unsigned char *)&now;
+  int seed = 0;
+  size_t i;
+  for ( i = 0; i < sizeof(now); i++ )
+    seed = seed * ( UCHAR_MAX + 2U ) + p[i];
+  return seed;
 }
 
-double uniformDeviate(int seed)
+double uniformDeviate ( int seed )
 {
-    return seed * (1.0 / (RAND_MAX + 1.0) );
+  return seed * ( 1.0 / ( RAND_MAX + 1.0 ) );
 }
 
-void bubbleSort(Individual *h_pop)
+void bubbleSort(Individual *ind)
 {
   int swapped = 0;
   int i = 0;
   Individual tmp;
   do
   {
-    swapped = 0;
-    for(i=0;i<POPULATION;i++)
+    swapped=0;
+    for(i=0;i<POPULATION-1;i++)
     {
-      if(h_pop[i].fitness > h_pop[i+1].fitness)
+      if(ind[i].fitness > ind[i+1].fitness)
       {
-        memcpy(&tmp,        &h_pop[i],   sizeof(Individual));
-        memcpy(&h_pop[i],   &h_pop[i+1], sizeof(Individual));
-        memcpy(&h_pop[i+1], &tmp,        sizeof(Individual));
-        swapped = 1;
+        memcpy(&tmp,     &ind[i],  sizeof(Individual));
+        memcpy(&ind[i],  &ind[i+1],sizeof(Individual));
+        memcpy(&ind[i+1],&tmp,     sizeof(Individual));
+        swapped=1;
       }
     }
   }while(swapped==1);
-}
-
-void debug(const char *format, ...)
-{
-#ifdef DEBUG
-  va_list args;
-  va_start(args,format);
-  vfprintf(stderr,format,args);
-  va_end(args);
-#endif
 }
 
