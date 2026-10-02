@@ -60,3 +60,18 @@ void createRandomRules(Individual *ind)
   }
 }
 
+
+//Unbiased ICs: each cell is 1 with probability 0.5, so the density is Binomial(LAT_SIZE,0.5)
+void createUnbiasedLattices(Lattice *lat, int n)
+{
+  int i,k;
+  for(i=0;i<n;i++)
+  {
+    lat[i].density = 0;
+    for(k=0;k<LAT_SIZE;k++)
+    {
+      lat[i].cells[k] = (uniformDeviate(rand()) < 0.5 ? '1' : '0');
+      if(lat[i].cells[k]=='1') lat[i].density++;
+    }
+  }
+}

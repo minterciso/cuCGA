@@ -7,6 +7,7 @@
 
 void createRandomLattice(Individual *ind);
 void createRandomRules(Individual *ind);
+void createUnbiasedLattices(Lattice *lat, int n);
 
 #endif //__CA_H
 

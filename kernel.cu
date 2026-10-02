@@ -18,7 +18,7 @@ __device__ int d_bin2dec(char *bin, int size)
 
   for(i=0;i<size;i++)
   {
-    n = (bin[i]-'0') * powf(2,size-(i+1));
+    n = (bin[i]-'0') << (size-(i+1));
     sum+=n;
   }
   return sum;
@@ -83,11 +83,13 @@ __device__ void d_bin2hex(char *hex, char *bin, int h_size, int b_size)
   }
 }
 
-__global__ void executeCA(Lattice *lat, char *rule)
+//One thread per lattice; lattice t uses rule t/latsPerRule (RULE_SIZE chars each)
+__global__ void executeCA(Lattice *lat, const char *rules, int nLats, int latsPerRule)
 {
   int t_idx = blockDim.x*blockIdx.x + threadIdx.x;
-  if(t_idx < MAX_LATS)
+  if(t_idx < nLats)
   {
+    const char *rule = &rules[(t_idx/latsPerRule)*RULE_SIZE];
     int dif = 0;
     int pos = 0;
     char res[LAT_SIZE];
