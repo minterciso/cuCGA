@@ -48,7 +48,6 @@
 
 //GA Probabilities (and elitism amount)
 #define CROSS_AMOUNT 20
-#define CROSS_RATE 10
 #define MUT_RATE 0.016
 
 //Define the mode we are studying (binary or ternary representation)

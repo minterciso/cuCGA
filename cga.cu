@@ -65,8 +65,7 @@ void crossOver(Individual *pop)
   int f1_idx,f2_idx,s1_idx,s2_idx;
   int rest = (POPULATION-1)-CROSS_AMOUNT;
   int point = 0; //Crossover point
-  int i,j,k;
-  int rnd = 0;
+  int i,k;
 #ifdef DEBUG
   FILE *fp = fopen("logs/crossover.log","w+");
   if(fp==NULL)
@@ -83,16 +82,8 @@ void crossOver(Individual *pop)
     f1_idx = rest + uniformDeviate(rand()) * (POPULATION - rest);
     f2_idx = rest + uniformDeviate(rand()) * (POPULATION - rest);
 
-    //Select the crossover point
-    for(j=0;j<RULE_SIZE;j++)
-    {
-      rnd = uniformDeviate(rand())*100;
-      if( rnd <= CROSS_RATE )
-      {
-        point = j;
-        break;
-      }
-    }
+    //Select the crossover point, uniformly in [1,RULE_SIZE-1] so both fathers contribute
+    point = 1 + uniformDeviate(rand())*(RULE_SIZE-1);
 
     //Copy fathers to a temp variable
     memcpy(&fat1,&pop[f1_idx],sizeof(Individual));
