@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include <time.h>
 
 void dec2bin(int decimal, char *bin, int size)
 {

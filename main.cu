@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <cuda.h>
 
 #include "structs.h"
@@ -57,7 +58,15 @@ int main(int argc, char *argv[])
 #endif
   }
 
-  FILE *fp = fopen("logs/output.log","w+");
+  FILE *fp = fopen(F_OUTPUT_FILE,"w+");
+  if(fp==NULL)
+  {
+    perror("fopen(" F_OUTPUT_FILE ")");
+    cudaFree(d_lat);
+  cudaFree(d_rule);
+    free(h_pop);
+    return EXIT_FAILURE;
+  }
 
   for(int g=0;g<GA_RUNS;g++)
   {
@@ -116,7 +125,7 @@ int main(int argc, char *argv[])
     }
     bubbleSort(h_pop);
     fprintf(fp,"(%3d)\n",h_pop[POPULATION-1].fitness);
-    char hex[32];
+    char hex[33];
     memset(hex,'0',32);
     bin2hex(hex,h_pop[POPULATION-1].rule,32,RULE_SIZE);
     hex[32]='\0';
@@ -137,7 +146,7 @@ int main(int argc, char *argv[])
   //Clear memory
   free(h_pop);
   cudaFree(d_lat);
-    cudaFree(d_rule);
+  cudaFree(d_rule);
 
   return EXIT_SUCCESS;
 }

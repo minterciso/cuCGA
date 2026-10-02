@@ -69,6 +69,11 @@ void crossOver(Individual *pop)
   int rnd = 0;
 #ifdef DEBUG
   FILE *fp = fopen("logs/crossover.log","w+");
+  if(fp==NULL)
+  {
+    perror("fopen(logs/crossover.log)");
+    exit(EXIT_FAILURE);
+  }
   fprintf(fp,"Crossing over...\n");
 #endif
   k=0;

@@ -2,6 +2,7 @@
 #include "utils.h"
 
 #include <assert.h>
+#include <string.h>
 
 void createRandomLattice(Individual *ind)
 {
