@@ -1,3 +1,4 @@
 cuCga
 logs/*
 !logs/.gitkeep
+results/*/runs/
