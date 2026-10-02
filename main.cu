@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
         for(int k=0;k<LAT_SIZE;k++)
           if(h_pop[i].lat[j].cells[k]=='1') count++;
         if( (h_pop[i].lat[j].density > LAT_SIZE/2 && count==LAT_SIZE) ||
-            (h_pop[i].lat[j].density < LAT_SIZE/2 && count==0))
+            (h_pop[i].lat[j].density <= LAT_SIZE/2 && count==0))
           h_pop[i].fitness++;
       }
       fprintf(fp,"%3d ",h_pop[i].fitness);

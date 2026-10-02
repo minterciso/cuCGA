@@ -16,10 +16,6 @@ void createRandomLattice(Individual *ind)
     memset(ind->lat[i].cells,'0',LAT_SIZE); //We allways start with an empty Lattice
 #ifndef VALIDATE
     ind->lat[i].density = uniformDeviate(rand())*(LAT_SIZE+1); //Uniform distribution over [0,LAT_SIZE]
-#endif
-#ifdef VALIDATE
-    ind->lat[i].density = 90 + uniformDeviate(rand())*(60-90); //Unbiased distribution
-#endif
     count = 0;
     while(count < ind->lat[i].density)
     {
@@ -30,6 +26,20 @@ void createRandomLattice(Individual *ind)
         count++;
       }
     }
+#endif
+#ifdef VALIDATE
+    //Unbiased distribution: each cell is 1 with probability 0.5, so the density is Binomial(LAT_SIZE,0.5)
+    count = 0;
+    for(rnd=0;rnd<LAT_SIZE;rnd++)
+    {
+      if(uniformDeviate(rand()) < 0.5)
+      {
+        ind->lat[i].cells[rnd]='1';
+        count++;
+      }
+    }
+    ind->lat[i].density = count;
+#endif
   }
 }
 
