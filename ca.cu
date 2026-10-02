@@ -15,15 +15,15 @@ void createRandomLattice(Individual *ind)
   {
     memset(ind->lat[i].cells,'0',LAT_SIZE); //We allways start with an empty Lattice
 #ifndef VALIDATE
-    ind->lat[i].density = uniformDeviate(rand())*(LAT_SIZE-1); //Uniform distribution
+    ind->lat[i].density = uniformDeviate(rand())*(LAT_SIZE+1); //Uniform distribution over [0,LAT_SIZE]
 #endif
 #ifdef VALIDATE
     ind->lat[i].density = 90 + uniformDeviate(rand())*(60-90); //Unbiased distribution
 #endif
     count = 0;
-    while(count <= ind->lat[i].density)
+    while(count < ind->lat[i].density)
     {
-      rnd = uniformDeviate(rand())*(LAT_SIZE-1);  //All cells have equal probability to be choosen
+      rnd = uniformDeviate(rand())*LAT_SIZE;  //All cells have equal probability to be choosen
       if(ind->lat[i].cells[rnd]=='0')
       {
         ind->lat[i].cells[rnd]='1';
