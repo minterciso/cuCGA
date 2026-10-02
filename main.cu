@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     for(int i = 0; i < POPULATION;i++)
     {
       //Passing rule to device
-      d_error = cudaMemcpy(d_rule,h_pop[0].rule,RULE_SIZE,cudaMemcpyHostToDevice);
+      d_error = cudaMemcpy(d_rule,h_pop[i].rule,RULE_SIZE,cudaMemcpyHostToDevice);
       if(d_error!=cudaSuccess)
       {
         fprintf(stderr,"cudaMemcpy (h2d):%s\n",cudaGetErrorString(d_error));

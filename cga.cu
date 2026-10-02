@@ -112,9 +112,9 @@ void crossOver(Individual *pop)
     memcpy(&pop[s2_idx],&son2,sizeof(Individual));
 #ifdef DEBUG
     fprintf(fp,"Selecting %d(%d) and %d(%d) as fathers.\n",f1_idx,fat1.fitness, f2_idx,fat2.fitness);
-    fprintf(fp,"f1:%s\nf2:%s\n",fat1.rule,fat2.rule);
+    fprintf(fp,"f1:%.*s\nf2:%.*s\n",RULE_SIZE,fat1.rule,RULE_SIZE,fat2.rule);
     fprintf(fp,"Point:%d\n",point);
-    fprintf(fp,"s1:%s\ns2:%s\n",son1.rule,son2.rule);
+    fprintf(fp,"s1:%.*s\ns2:%.*s\n",RULE_SIZE,son1.rule,RULE_SIZE,son2.rule);
     fflush(fp);
 #endif
   }
@@ -133,7 +133,7 @@ void mutate(Individual *pop, size_t amount)
     {
       rnd = uniformDeviate(rand());
       if(rnd <= MUT_RATE)
-        pop[i].rule[j]=(pop[i].rule[j]=='0'?'1':'1');
+        pop[i].rule[j]=(pop[i].rule[j]=='0'?'1':'0');
     }
   }
 }
