@@ -23,3 +23,16 @@ mkdir -p logs && ./build/cuCga --seed 42
 ```
 
 The host code in `src/` is the same as in [cga](https://github.com/minterciso/cga), the CPU version of this GA; only the CA backend differs (`src/kernel.cu` here, `src/backend_cpu.c` there, behind `src/backend.h`). For the same seed and options both programs produce the same run.
+
+## Plots
+
+The plotting tools run in a project-local Python virtual environment, so nothing is installed in the system Python:
+
+```sh
+scripts/setup_venv.sh                       # creates .venv and installs requirements.txt
+.venv/bin/python scripts/plot_evolution.py run evolution.csv -o evolution.png \
+    --stdout stdout.txt --stderr stderr.txt   # one run (CSV from --csv)
+.venv/bin/python scripts/plot_evolution.py experiment results/<dir>   # several runs
+```
+
+`scripts/run_experiment.sh -n RUNS` runs RUNS seeds and, when `.venv` exists, draws `evolution.png` for every run and one for the whole experiment (median and quartiles across runs, plus the final binomial performance in the bins of Table V of the paper); `-x` skips the plots. The curves are **training** fitness (each individual on its own random ICs), which predicts the final binomial performance poorly; that performance is shown separately (★ on the per-run plot).
