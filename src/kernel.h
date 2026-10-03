@@ -12,7 +12,7 @@ __device__ int  d_bin2dec(char *bin, int size);
 __device__ void d_hex2bin(char *hex, char *bin, int h_size, int b_size);
 __device__ void d_bin2hex(char *hex, char *bin, int h_size, int b_size);
 
-__global__ void executeCA(Lattice *lat, const char *rules, int nLats, int latsPerRule);
+__global__ void executeCAKernel(Lattice *lat, const char *rules, int nLats, int latsPerRule);
 
 #endif //__KERNEL_H
 

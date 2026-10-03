@@ -1,0 +1,54 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "backend.h"
+#include "ca.h"
+#include "utils.h"
+
+//The GPU backend (runCA) must give exactly the same final lattices as the CPU reference
+//(cpuRunCA) for random rules on random and unbiased ICs.
+#define N_RULES 8
+#define LATS_PER_RULE 500
+
+int main(void)
+{
+  int nLats = N_RULES*LATS_PER_RULE;
+  Lattice *gpu = (Lattice*)malloc(sizeof(Lattice)*nLats);
+  Lattice *cpu = (Lattice*)malloc(sizeof(Lattice)*nLats);
+  char rules[N_RULES*RULE_SIZE];
+  int i,k,diff=0;
+
+  if(gpu==NULL || cpu==NULL)
+  {
+    perror("malloc");
+    return 1;
+  }
+  srand(2026);
+  //Rule 0 is GKL, rule 1 all zeros, the others random
+  parseRule("005f005f005f005f005fff5f005fff5f",&rules[0]);
+  memset(&rules[RULE_SIZE],'0',RULE_SIZE);
+  for(i=2*RULE_SIZE;i<N_RULES*RULE_SIZE;i++)
+    rules[i] = (uniformDeviate(rand()) < 0.5 ? '0' : '1');
+  createUnbiasedLattices(gpu,nLats);
+  //Make half of them low/high density so convergence is exercised too
+  for(i=0;i<nLats;i+=2)
+    for(k=0;k<LAT_SIZE;k++)
+      if(gpu[i].cells[k]=='1' && uniformDeviate(rand()) < 0.5)
+        gpu[i].cells[k]='0';
+  memcpy(cpu,gpu,sizeof(Lattice)*nLats);
+
+  runCA(gpu,rules,nLats,LATS_PER_RULE);
+  cpuRunCA(cpu,rules,nLats,LATS_PER_RULE);
+
+  for(i=0;i<nLats;i++)
+    if(memcmp(gpu[i].cells,cpu[i].cells,LAT_SIZE)!=0)
+      diff++;
+  if(diff)
+    fprintf(stderr,"FAIL: %d of %d lattices differ between GPU and CPU\n",diff,nLats);
+  else
+    printf("GPU and CPU agree on all %d lattices\n",nLats);
+  free(gpu);
+  free(cpu);
+  return diff==0 ? 0 : 1;
+}

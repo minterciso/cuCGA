@@ -6,19 +6,19 @@
 #   -n runs        number of executions (default 100)
 #   -s first_seed  seeds used are first_seed .. first_seed+runs-1 (default 1)
 #   -j jobs        executions run concurrently (default 4)
-#   -b binary      cuCga binary (default ./cuCga, built with make if missing)
+#   -b binary      cuCga binary (default build/cuCga, built with CMake if missing)
 #   -i ics         binomial ICs for the final evaluation (default 10000)
 #   -o outdir      output directory (default results/<timestamp>)
 #
 # Produces <outdir>/results.csv (one row per run) and <outdir>/runs/seed_NNNN/
-# holding each run's logs/output.log, logs/crossover.log and stdout.
+# holding each run's logs/output.log and stdout.
 set -euo pipefail
 export LC_ALL=C
 
 RUNS=100
 FIRST_SEED=1
 JOBS=4
-BIN=./cuCga
+BIN=build/cuCga
 ICS=10000
 OUT=""
 
@@ -37,8 +37,8 @@ done
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 [ -n "$OUT" ] || OUT="results/$(date +%Y%m%d-%H%M%S)"
-if [ "$BIN" = "./cuCga" ] && [ ! -x cuCga ]; then
-    make
+if [ "$BIN" = "build/cuCga" ] && [ ! -x build/cuCga ]; then
+    cmake -S . -B build && cmake --build build
 fi
 BIN=$(realpath "$BIN")
 mkdir -p "$OUT/runs"

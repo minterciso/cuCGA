@@ -5,3 +5,19 @@ Here you'll  find the source code used to test a GA for the CA problem known as 
 This is the source code for the IEEE paper [Ternary representation improves the search for binary, one-dimensional density classifier cellular automata](https://ieeexplore.ieee.org/document/5949850) developed by myself and my masters teacher and coleague Pedro Paulo Balbi de Oliveira.
 
 More documentation to follow
+
+# Building and running
+
+Requires CMake >= 3.24, the CUDA toolkit and a C compiler. The GPU architecture defaults to the one(s) present on the machine (`-DCMAKE_CUDA_ARCHITECTURES=89` to override).
+
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build           # template decoding, and GPU vs CPU CA results
+mkdir -p logs && ./build/cuCga --seed 42
+./build/cuCga --representation single --seed 42
+./build/cuCga --validate 005f005f005f005f005fff5f005fff5f   # evaluate a rule (GKL) on 10^4 binomial ICs
+./build/cuCga --help
+```
+
+The host code in `src/` is the same as in [cga](https://github.com/minterciso/cga), the CPU version of this GA; only the CA backend differs (`src/kernel.cu` here, `src/backend_cpu.c` there, behind `src/backend.h`). For the same seed and options both programs produce the same run.

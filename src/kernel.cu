@@ -1,6 +1,18 @@
 #include "kernel.h"
 
 #include "consts.h"
+#include "backend.h"
+
+#define CUDA_CHECK(call)                                                           \
+  do {                                                                             \
+    cudaError_t _err = (call);                                                     \
+    if(_err != cudaSuccess)                                                        \
+    {                                                                              \
+      fprintf(stderr,"%s:%d %s: %s\n",__FILE__,__LINE__,#call,cudaGetErrorString(_err)); \
+      exit(EXIT_FAILURE);                                                          \
+    }                                                                              \
+  } while(0)
+
 __device__ void d_dec2bin(int decimal, char *bin, int size)
 {
   int remain;
@@ -84,7 +96,7 @@ __device__ void d_bin2hex(char *hex, char *bin, int h_size, int b_size)
 }
 
 //One thread per lattice; lattice t uses rule t/latsPerRule (RULE_SIZE chars each)
-__global__ void executeCA(Lattice *lat, const char *rules, int nLats, int latsPerRule)
+__global__ void executeCAKernel(Lattice *lat, const char *rules, int nLats, int latsPerRule)
 {
   int t_idx = blockDim.x*blockIdx.x + threadIdx.x;
   if(t_idx < nLats)
@@ -122,3 +134,26 @@ __global__ void executeCA(Lattice *lat, const char *rules, int nLats, int latsPe
   }
 }
 
+//Backend entry point (backend.h): one thread per lattice
+extern "C" void runCA(Lattice *h_lat, const char *h_rules, int nLats, int latsPerRule)
+{
+  Lattice *d_lat;
+  char *d_rules;
+  size_t latSize  = sizeof(Lattice)*nLats;
+  size_t ruleSize = (size_t)RULE_SIZE*((nLats+latsPerRule-1)/latsPerRule);
+
+  CUDA_CHECK(cudaMalloc((void**)&d_lat,latSize));
+  CUDA_CHECK(cudaMalloc((void**)&d_rules,ruleSize));
+  CUDA_CHECK(cudaMemcpy(d_lat,h_lat,latSize,cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_rules,h_rules,ruleSize,cudaMemcpyHostToDevice));
+
+  dim3 blockSize(128);
+  dim3 gridSize((nLats+blockSize.x-1)/blockSize.x);
+  executeCAKernel<<<gridSize,blockSize>>>(d_lat,d_rules,nLats,latsPerRule);
+  CUDA_CHECK(cudaGetLastError());
+  CUDA_CHECK(cudaDeviceSynchronize());
+
+  CUDA_CHECK(cudaMemcpy(h_lat,d_lat,latSize,cudaMemcpyDeviceToHost));
+  cudaFree(d_lat);
+  cudaFree(d_rules);
+}
