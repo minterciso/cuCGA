@@ -16,6 +16,7 @@ cmake --build build
 ctest --test-dir build           # template decoding, and GPU vs CPU CA results
 mkdir -p logs && ./build/cuCga --seed 42
 ./build/cuCga --representation single --seed 42
+./build/cuCga --generations 500 --seed 42
 ./build/cuCga --validate 005f005f005f005f005fff5f005fff5f   # evaluate a rule (GKL) on 10^4 binomial ICs
 ./build/cuCga --help
 ```

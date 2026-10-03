@@ -75,7 +75,7 @@ void evolve(Individual *pop)
   else
     fprintf(fp,"Seed:%u\n",params.seed);
 #endif
-  for(r=0;r<GA_RUNS;r++)
+  for(r=0;r<params.generations;r++)
   {
     evaluatePopulation(pop,lat,rules);
     totFit = 0.0;
@@ -96,7 +96,7 @@ void evolve(Individual *pop)
     }
     fprintf(stderr,"Run %3d:[%3d](%.3f%%)\n",r,pop[POPULATION-1].fitness,totFit);
     //The last generation is only ranked: pop[POPULATION-1] is the best individual found
-    if(r==GA_RUNS-1) break;
+    if(r==params.generations-1) break;
     crossOver(pop);
     mutate(pop,POPULATION-CROSS_AMOUNT);
     for(i=0;i<POPULATION;i++)

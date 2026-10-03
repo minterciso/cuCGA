@@ -8,7 +8,7 @@
 #include "consts.h"
 #include "utils.h"
 
-Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, 0, DEFAULT_N_ICS, NULL };
+Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, 0, DEFAULT_N_ICS, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -27,12 +27,13 @@ static void usage(FILE *stream, const char *prog)
           "                          (default %d)\n"
           "  -p, --hash-prob P       probability of '#' in each template cell, in [0,1]\n"
           "                          (default %g)\n"
+          "  -g, --generations N     generations of the GA (default %d)\n"
           "  -s, --seed N            random seed, 0..%u (default: derived from the clock)\n"
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
           "  -h, --help              show this help\n",
-          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, UINT_MAX, DEFAULT_N_ICS, RULE_SIZE/4);
+          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, UINT_MAX, DEFAULT_N_ICS, RULE_SIZE/4);
 }
 
 static int parseDouble(const char *s, double min, double max, double *out)
@@ -68,6 +69,7 @@ int parseParams(int argc, char *argv[])
     {"representation", required_argument, NULL, 'r'},
     {"t-max",          required_argument, NULL, 't'},
     {"hash-prob",      required_argument, NULL, 'p'},
+    {"generations",    required_argument, NULL, 'g'},
     {"seed",           required_argument, NULL, 's'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
@@ -79,7 +81,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:s:n:v:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:s:n:v:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -130,6 +132,14 @@ int parseParams(int argc, char *argv[])
         }
         seed_set = 1;
         break;
+      case 'g':
+        if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
+        {
+          fprintf(stderr, "Invalid number of generations '%s': expected a positive integer\n", optarg);
+          return -1;
+        }
+        params.generations = (int)u;
+        break;
       case 'n':
         if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
         {
@@ -168,5 +178,5 @@ void printParams(FILE *stream)
           params.mut_rate, params.cross_rate, REP_NAMES[params.representation]);
   if(params.representation != REP_BINARY)
     fprintf(stream, " t-max=%d hash-prob=%g", params.t_max, params.hash_prob);
-  fprintf(stream, " seed=%u ics=%d\n", params.seed, params.n_ics);
+  fprintf(stream, " generations=%d seed=%u ics=%d\n", params.generations, params.seed, params.n_ics);
 }

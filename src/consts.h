@@ -48,7 +48,7 @@
 
 //Runnable definition
 #define CA_RUNS 300
-#define GA_RUNS 100
+#define DEFAULT_GENERATIONS 100 //Generations per GA run (--generations)
 
 //GA Probabilities (and elitism amount)
 //Crossover rate, mutation rate and the representation are runtime parameters (see params.h);
