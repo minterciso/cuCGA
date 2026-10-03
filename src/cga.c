@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include "consts.h"
 #include "ca.h"
@@ -61,6 +62,8 @@ void evolve(Individual *pop)
   double totFit = 0;
   char hex[RULE_SIZE/4+1];
   FILE *fp = NULL;
+  FILE *csv = NULL;
+  double sumSq, eliteSum, mean;
   int P = params.population;
   Lattice *lat = (Lattice*)malloc(sizeof(Lattice)*MAX_LATS*(size_t)P);
   char *rules = (char*)malloc((size_t)RULE_SIZE*P);
@@ -69,6 +72,15 @@ void evolve(Individual *pop)
   {
     perror("malloc");
     exit(EXIT_FAILURE);
+  }
+  if(params.csv_path!=NULL)
+  {
+    if((csv = fopen(params.csv_path,"w"))==NULL)
+    {
+      perror(params.csv_path);
+      exit(EXIT_FAILURE);
+    }
+    fprintf(csv,"generation,best,elite_mean,mean,std,min,best_rule\n");
   }
 #ifdef F_OUTPUT
   if((fp = fopen(F_OUTPUT_FILE,"w+"))==NULL)
@@ -96,6 +108,21 @@ void evolve(Individual *pop)
       fflush(fp);
     }
     fprintf(stderr,"Run %3d:[%3d](%.3f%%)\n",r,pop[P-1].fitness,totFit);
+    if(csv)
+    {
+      //Sorted ascending: pop[0] is the worst, pop[P-1] the best, the elite are the last ones
+      sumSq = eliteSum = mean = 0.0;
+      for(i=0;i<P;i++)
+        mean += pop[i].fitness;
+      mean /= P;
+      for(i=0;i<P;i++)
+        sumSq += (pop[i].fitness-mean)*(pop[i].fitness-mean);
+      for(i=P-params.elite;i<P;i++)
+        eliteSum += pop[i].fitness;
+      fprintf(csv,"%d,%u,%.4f,%.4f,%.4f,%u,%s\n",r,pop[P-1].fitness,eliteSum/params.elite,mean,
+              sqrt(sumSq/P),pop[0].fitness,hex);
+      fflush(csv);
+    }
     //The last generation is only ranked: pop[P-1] is the best individual found
     if(r==params.generations-1) break;
     crossOver(pop);
@@ -104,6 +131,7 @@ void evolve(Individual *pop)
       createRandomLattices(&pop[i]);
   }
   if(fp) fclose(fp);
+  if(csv) fclose(csv);
   free(lat);
   free(rules);
 }

@@ -9,7 +9,7 @@
 #include "utils.h"
 
 Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS,
-                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_N_ICS, NULL };
+                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_N_ICS, NULL, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -35,11 +35,14 @@ static void usage(FILE *stream, const char *prog)
           "                          most population-1. The elite is kept unchanged; parents\n"
           "                          are drawn from the elite plus the next best individual\n"
           "  -s, --seed N            random seed, 0..%u (default: derived from the clock)\n"
+          "  -o, --csv FILE          write per-generation fitness statistics to FILE (CSV):\n"
+          "                          generation,best,elite_mean,mean,std,min,best_rule\n"
+          "                          fitness = training ICs classified correctly, of %d\n"
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
           "  -h, --help              show this help\n",
-          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, MAX_POPULATION, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, DEFAULT_N_ICS, RULE_SIZE/4);
+          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, MAX_POPULATION, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, MAX_LATS, DEFAULT_N_ICS, RULE_SIZE/4);
 }
 
 static int parseDouble(const char *s, double min, double max, double *out)
@@ -81,6 +84,7 @@ int parseParams(int argc, char *argv[])
     {"seed",           required_argument, NULL, 's'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
+    {"csv",            required_argument, NULL, 'o'},
     {"help",           no_argument,       NULL, 'h'},
     {NULL, 0, NULL, 0}
   };
@@ -89,7 +93,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:n:v:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:n:v:o:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -173,6 +177,9 @@ int parseParams(int argc, char *argv[])
         break;
       case 'v':
         params.validate_hex = optarg;
+        break;
+      case 'o':
+        params.csv_path = optarg;
         break;
       case 'h':
         usage(stdout, argv[0]);

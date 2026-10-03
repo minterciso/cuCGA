@@ -28,6 +28,7 @@ typedef struct Params
   unsigned int seed;             //srand() seed; taken from the clock unless --seed is given
   int n_ics;                     //Binomial ICs for the final evaluation of a rule
   const char *validate_hex;      //When set, only evaluate this rule (hex, MCH order), no GA
+  const char *csv_path;          //When set, per-generation fitness statistics are written there as CSV
 }Params;
 
 extern Params params;
