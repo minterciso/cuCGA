@@ -19,7 +19,7 @@ int parseRule(const char *hex, char *rule);
 int timeSeed(void);
 double uniformDeviate ( int seed );
 
-//Sorters
-void bubbleSort(Individual *ind, int n);
+//Sorters: ascending fitness, stable
+void sortByFitness(Individual *ind, int n);
 
 #endif //__UTILS_H

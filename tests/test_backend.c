@@ -7,9 +7,10 @@
 #include "utils.h"
 
 //The GPU backend (runCA) must give exactly the same final lattices as the CPU reference
-//(cpuRunCA) for random rules on random and unbiased ICs.
-#define N_RULES 8
-#define LATS_PER_RULE 500
+//(cpuRunCA) for random rules on random and unbiased ICs. N_RULES*LATS_PER_RULE is odd, so
+//the last block of the kernel is only partly used.
+#define N_RULES 7
+#define LATS_PER_RULE 501
 
 int main(void)
 {
@@ -25,10 +26,14 @@ int main(void)
     return 1;
   }
   srand(2026);
-  //Rule 0 is GKL, rule 1 all zeros, the others random
+  //Rule 0 is GKL (converges), rule 1 all zeros (fixed point after one step), rule 2 the
+  //complement of the centre cell (period 2, never fixed: runs all CA_RUNS steps), the
+  //others random
   parseRule("005f005f005f005f005fff5f005fff5f",&rules[0]);
   memset(&rules[RULE_SIZE],'0',RULE_SIZE);
-  for(i=2*RULE_SIZE;i<N_RULES*RULE_SIZE;i++)
+  for(k=0;k<RULE_SIZE;k++)
+    rules[2*RULE_SIZE+k] = ((k>>RADIUS)&1) ? '0' : '1';
+  for(i=3*RULE_SIZE;i<N_RULES*RULE_SIZE;i++)
     rules[i] = (uniformDeviate(rand()) < 0.5 ? '0' : '1');
   createUnbiasedLattices(gpu,nLats);
   //Make half of them low/high density so convergence is exercised too

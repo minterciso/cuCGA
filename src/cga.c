@@ -99,7 +99,7 @@ void evolve(Individual *pop)
       totFit+=(double)pop[i].fitness;
     }
     totFit=100.0*totFit/((double)P*MAX_LATS); //Average fitness, in % of the ICs
-    bubbleSort(pop,P);
+    sortByFitness(pop,P);
     bin2hex(hex,pop[P-1].rule,RULE_SIZE/4,RULE_SIZE);
     hex[RULE_SIZE/4]='\0';
     if(fp)
