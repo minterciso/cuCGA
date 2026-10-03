@@ -2,7 +2,7 @@
 # Run N independent GA executions with consecutive seeds and collect the
 # final binomial-IC performance of the best rule of each run.
 #
-# Usage: scripts/run_experiment.sh [-n runs] [-s first_seed] [-j jobs] [-b binary] [-i ics] [-o outdir] [-x]
+# Usage: scripts/run_experiment.sh [-n runs] [-s first_seed] [-j jobs] [-b binary] [-i ics] [-o outdir] [-a args] [-x]
 #   -n runs        number of executions (default 100)
 #   -s first_seed  seeds used are first_seed .. first_seed+runs-1 (default 1)
 #   -j jobs        executions run concurrently (default 4)
@@ -10,6 +10,9 @@
 #                  repository builds; built with CMake if missing)
 #   -i ics         binomial ICs for the final evaluation (default 10000)
 #   -o outdir      output directory (default results/<timestamp>)
+#   -a args        extra GA options passed to every run, as one quoted string,
+#                  e.g. -a "-r single -g 200"; the seed, ICs and CSV are set by
+#                  this script, so -s/-n/-o/-v (and long forms) are not allowed
 #   -x             do not draw the evolution plots
 #
 # Produces <outdir>/results.csv (one row per run), <outdir>/evolution.png (all
@@ -26,8 +29,9 @@ BIN=""
 ICS=10000
 OUT=""
 PLOT=1
+GA_ARGS=""
 
-while getopts "n:s:j:b:i:o:xh" opt; do
+while getopts "n:s:j:b:i:o:a:xh" opt; do
     case "$opt" in
         n) RUNS=$OPTARG ;;
         s) FIRST_SEED=$OPTARG ;;
@@ -35,8 +39,17 @@ while getopts "n:s:j:b:i:o:xh" opt; do
         b) BIN=$OPTARG ;;
         i) ICS=$OPTARG ;;
         o) OUT=$OPTARG ;;
+        a) GA_ARGS=$OPTARG ;;
         x) PLOT=0 ;;
-        *) sed -n '2,20p' "$0"; exit 1 ;;
+        *) sed -n '2,23p' "$0"; exit 1 ;;
+    esac
+done
+
+for a in $GA_ARGS; do
+    case "$a" in
+        -s*|--seed*|-n*|--ics*|-o*|--csv*|-v*|--validate*|-h|--help)
+            echo "error: -a must not contain '$a' (seed, ICs, CSV and validation are set by this script)" >&2
+            exit 1 ;;
     esac
 done
 
@@ -62,6 +75,7 @@ OUT=$(realpath "$OUT")
     echo "git: $(git rev-parse HEAD 2>/dev/null || echo n/a)$(git diff --quiet 2>/dev/null || echo ' (dirty)')"
     echo "binary: $BIN ($(sha256sum "$BIN" | cut -c1-16))"
     echo "runs: $RUNS  seeds: $FIRST_SEED..$((FIRST_SEED+RUNS-1))  ics: $ICS  jobs: $JOBS"
+    echo "ga args: ${GA_ARGS:-(defaults)}"
     echo "gpu: $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null || echo n/a)"
     echo "nvcc: $(nvcc --version 2>/dev/null | tail -1 || echo n/a)"
 } > "$OUT/manifest.txt"
@@ -70,14 +84,15 @@ run_one() {
     local seed=$1 dir
     dir=$(printf "%s/runs/seed_%04d" "$OUT" "$seed")
     mkdir -p "$dir/logs"
-    (cd "$dir" && "$BIN" -s "$seed" -n "$ICS" --csv evolution.csv > stdout.txt 2> stderr.txt)
+    # shellcheck disable=SC2086 # GA_ARGS is split into options on purpose
+    (cd "$dir" && "$BIN" $GA_ARGS -s "$seed" -n "$ICS" --csv evolution.csv > stdout.txt 2> stderr.txt)
     if [ "$PLOT" -eq 1 ]; then
         "$PY" "$ROOT/scripts/plot_evolution.py" run "$dir/evolution.csv" -o "$dir/evolution.png" \
             --stdout "$dir/stdout.txt" --stderr "$dir/stderr.txt" --title "Evolution, seed $seed" > /dev/null
     fi
 }
 export -f run_one
-export OUT BIN ICS PLOT PY ROOT
+export OUT BIN ICS PLOT PY ROOT GA_ARGS
 
 start=$(date +%s)
 seq "$FIRST_SEED" $((FIRST_SEED+RUNS-1)) | xargs -P "$JOBS" -I{} bash -c 'run_one {} && echo -n "." >&2'
@@ -91,7 +106,7 @@ done | sort -t, -k1,1n >> "$OUT/results.csv"
 
 if [ "$PLOT" -eq 1 ]; then
     "$PY" scripts/plot_evolution.py experiment "$OUT" -o "$OUT/evolution.png" \
-        --title "Evolution across runs ($(basename "$OUT"))" >&2
+        --title "Evolution across runs ($(basename "$OUT"))${GA_ARGS:+: $GA_ARGS}" >&2
 fi
 
 n=$(($(wc -l < "$OUT/results.csv") - 1))

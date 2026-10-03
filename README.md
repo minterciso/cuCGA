@@ -35,4 +35,4 @@ scripts/setup_venv.sh                       # creates .venv and installs require
 .venv/bin/python scripts/plot_evolution.py experiment results/<dir>   # several runs
 ```
 
-`scripts/run_experiment.sh -n RUNS` runs RUNS seeds and, when `.venv` exists, draws `evolution.png` for every run and one for the whole experiment (median and quartiles across runs, plus the final binomial performance in the bins of Table V of the paper); `-x` skips the plots. The curves are **training** fitness (each individual on its own random ICs), which predicts the final binomial performance poorly; that performance is shown separately (★ on the per-run plot).
+`scripts/run_experiment.sh -n RUNS [-a "GA options"]` runs RUNS seeds (e.g. `-a "-r single -g 200"`) and, when `.venv` exists, draws `evolution.png` for every run and one for the whole experiment (median and quartiles across runs, plus the final binomial performance in the bins of Table V of the paper); `-x` skips the plots. The curves are **training** fitness (each individual on its own random ICs), which predicts the final binomial performance poorly; that performance is shown separately (★ on the per-run plot).
