@@ -1,3 +1,4 @@
+CEC*.pdf
 build/
 .venv/
 __pycache__/
