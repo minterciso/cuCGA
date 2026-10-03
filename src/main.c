@@ -49,13 +49,13 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
   }
 
-  //On the heap: POPULATION individuals are ~1.5MB (~15MB with VALIDATE)
-  if((population=(Individual*)calloc(POPULATION,sizeof(Individual)))==NULL)
+  //On the heap: ~15KB per individual (~150KB with VALIDATE)
+  if((population=(Individual*)calloc(params.population,sizeof(Individual)))==NULL)
   {
     perror("calloc");
     return EXIT_FAILURE;
   }
-  for(i=0;i<POPULATION;i++)
+  for(i=0;i<params.population;i++)
   {
     createRandomLattices(&population[i]);
 #ifdef USE_BEST
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
   int j;
   char fname[FNAME_SIZE];
   memset(fname,'\0',FNAME_SIZE);
-  for(i=0;i<POPULATION;i++)
+  for(i=0;i<params.population;i++)
   {
     snprintf(fname,FNAME_SIZE-1,"logs/individual%03d.log",i);
     FILE *dfp = fopen(fname,"w+");
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
   //The population is ranked at the last generation and not altered afterwards,
   //so the last individual is the best one found
   char rule_dec[RULE_DEC_SIZE];
-  Individual *best = &population[POPULATION-1];
+  Individual *best = &population[params.population-1];
   ruleToDecimal(best->rule,rule_dec);
   fprintf(stderr,"Best rule: %s (fitness %u)\n",rule_dec,best->fitness);
   if(params.representation!=REP_BINARY)

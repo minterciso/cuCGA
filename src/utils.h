@@ -20,6 +20,6 @@ int timeSeed(void);
 double uniformDeviate ( int seed );
 
 //Sorters
-void bubbleSort(Individual *ind);
+void bubbleSort(Individual *ind, int n);
 
 #endif //__UTILS_H

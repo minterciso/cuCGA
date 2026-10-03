@@ -6,7 +6,6 @@
 
 //Structural definition (Production run)
 #ifndef DEBUG
-#define POPULATION 100
 
 #ifdef VALIDATE
 #define LAT_SIZE 149
@@ -24,7 +23,6 @@
 
 //Structural definition (Debug run)
 #ifdef DEBUG
-#define POPULATION 100
 
 #ifdef VALIDATE
 #define LAT_SIZE 149
@@ -51,9 +49,10 @@
 #define DEFAULT_GENERATIONS 100 //Generations per GA run (--generations)
 
 //GA Probabilities (and elitism amount)
-//Crossover rate, mutation rate and the representation are runtime parameters (see params.h);
+//Population, elite, crossover rate, mutation rate and the representation are runtime parameters (see params.h);
 //these are only their defaults.
-#define CROSS_AMOUNT 20
+#define DEFAULT_POPULATION 100 //P in MCH/CMD (--population)
+#define DEFAULT_ELITE_PCT 20.0 //E = 20 of P = 100 (--elite)
 #define DEFAULT_CROSS_RATE 1.0  //CMD: p_c = 100% (MCH uses 0.8)
 #define DEFAULT_MUT_RATE 0.016 //CMD: 1.6% per bit, ~2 bits per individual
 #define DEFAULT_TPL_MUT_RATE 0.064 //Templates: ~2 mutations per individual at t_max=9 (4.5 templates * 7 cells)

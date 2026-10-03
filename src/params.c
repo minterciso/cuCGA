@@ -8,7 +8,8 @@
 #include "consts.h"
 #include "utils.h"
 
-Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, 0, DEFAULT_N_ICS, NULL };
+Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS,
+                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_N_ICS, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -28,12 +29,17 @@ static void usage(FILE *stream, const char *prog)
           "  -p, --hash-prob P       probability of '#' in each template cell, in [0,1]\n"
           "                          (default %g)\n"
           "  -g, --generations N     generations of the GA (default %d)\n"
+          "  -P, --population N      population size, 2..%d (default %d)\n"
+          "  -e, --elite PCT         elite, in %% of the population, in (0,100) (default %g);\n"
+          "                          rounded to the nearest individual, at least 1 and at\n"
+          "                          most population-1. The elite is kept unchanged; parents\n"
+          "                          are drawn from the elite plus the next best individual\n"
           "  -s, --seed N            random seed, 0..%u (default: derived from the clock)\n"
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
           "  -h, --help              show this help\n",
-          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, UINT_MAX, DEFAULT_N_ICS, RULE_SIZE/4);
+          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, MAX_POPULATION, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, DEFAULT_N_ICS, RULE_SIZE/4);
 }
 
 static int parseDouble(const char *s, double min, double max, double *out)
@@ -70,6 +76,8 @@ int parseParams(int argc, char *argv[])
     {"t-max",          required_argument, NULL, 't'},
     {"hash-prob",      required_argument, NULL, 'p'},
     {"generations",    required_argument, NULL, 'g'},
+    {"population",     required_argument, NULL, 'P'},
+    {"elite",          required_argument, NULL, 'e'},
     {"seed",           required_argument, NULL, 's'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
@@ -81,7 +89,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:s:n:v:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:n:v:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -140,6 +148,21 @@ int parseParams(int argc, char *argv[])
         }
         params.generations = (int)u;
         break;
+      case 'P':
+        if(parseUInt(optarg, &u) != 0 || u < 2 || u > MAX_POPULATION)
+        {
+          fprintf(stderr, "Invalid population '%s': expected an integer in [2,%d]\n", optarg, MAX_POPULATION);
+          return -1;
+        }
+        params.population = (int)u;
+        break;
+      case 'e':
+        if(parseDouble(optarg, 0.0, 100.0, &params.elite_pct) != 0 || params.elite_pct <= 0.0 || params.elite_pct >= 100.0)
+        {
+          fprintf(stderr, "Invalid elite '%s': expected a percentage in (0,100)\n", optarg);
+          return -1;
+        }
+        break;
       case 'n':
         if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
         {
@@ -165,6 +188,13 @@ int parseParams(int argc, char *argv[])
     usage(stderr, argv[0]);
     return -1;
   }
+  params.elite = (int)(params.population*params.elite_pct/100.0 + 0.5);
+  if(params.elite < 1 || params.elite > params.population-1)
+  {
+    fprintf(stderr, "Elite of %g%% gives %d of %d individuals: it must keep at least 1 and leave at least 1 to replace\n",
+            params.elite_pct, params.elite, params.population);
+    return -1;
+  }
   if(!mut_set && params.representation != REP_BINARY)
     params.mut_rate = DEFAULT_TPL_MUT_RATE;
   if(!seed_set)
@@ -178,5 +208,6 @@ void printParams(FILE *stream)
           params.mut_rate, params.cross_rate, REP_NAMES[params.representation]);
   if(params.representation != REP_BINARY)
     fprintf(stream, " t-max=%d hash-prob=%g", params.t_max, params.hash_prob);
-  fprintf(stream, " generations=%d seed=%u ics=%d\n", params.generations, params.seed, params.n_ics);
+  fprintf(stream, " generations=%d population=%d elite=%g%% (%d) seed=%u ics=%d\n",
+          params.generations, params.population, params.elite_pct, params.elite, params.seed, params.n_ics);
 }

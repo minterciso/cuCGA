@@ -134,7 +134,7 @@ double uniformDeviate ( int seed )
   return seed * ( 1.0 / ( RAND_MAX + 1.0 ) );
 }
 
-void bubbleSort(Individual *ind)
+void bubbleSort(Individual *ind, int n)
 {
   int swapped = 0;
   int i = 0;
@@ -142,7 +142,7 @@ void bubbleSort(Individual *ind)
   do
   {
     swapped=0;
-    for(i=0;i<POPULATION-1;i++)
+    for(i=0;i<n-1;i++)
     {
       if(ind[i].fitness > ind[i+1].fitness)
       {
