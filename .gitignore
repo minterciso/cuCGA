@@ -6,3 +6,4 @@ cuCga
 logs/*
 !logs/.gitkeep
 results/
+RESULTS.md
