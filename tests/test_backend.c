@@ -7,8 +7,9 @@
 #include "utils.h"
 
 //The GPU backend (runCA) must give exactly the same final lattices as the CPU reference
-//(cpuRunCA) for random rules on random and unbiased ICs. N_RULES*LATS_PER_RULE is odd, so
-//the last block of the kernel is only partly used.
+//(cpuRunCA) for random rules on random and unbiased ICs, first with CA_RUNS steps and then
+//with a different step count per lattice (both parities, beyond CA_RUNS too, and 0).
+//N_RULES*LATS_PER_RULE is odd, so the last block of the kernel is only partly used.
 #define N_RULES 7
 #define LATS_PER_RULE 501
 
@@ -18,7 +19,7 @@ int main(void)
   Lattice *gpu = (Lattice*)malloc(sizeof(Lattice)*nLats);
   Lattice *cpu = (Lattice*)malloc(sizeof(Lattice)*nLats);
   char rules[N_RULES*RULE_SIZE];
-  int i,k,diff=0;
+  int i,k,pass,diff=0;
 
   if(gpu==NULL || cpu==NULL)
   {
@@ -41,18 +42,32 @@ int main(void)
     for(k=0;k<LAT_SIZE;k++)
       if(gpu[i].cells[k]=='1' && uniformDeviate(rand()) < 0.5)
         gpu[i].cells[k]='0';
-  memcpy(cpu,gpu,sizeof(Lattice)*nLats);
+  for(pass=0;pass<2;pass++)
+  {
+    int d=0;
+    if(pass==1)
+      for(i=0;i<nLats;i++)
+        gpu[i].steps = (i%37==0) ? 0 : poissonDeviate(POISSON_STEPS_MEAN) + (i&1);
+    memcpy(cpu,gpu,sizeof(Lattice)*nLats);
 
-  runCA(gpu,rules,nLats,LATS_PER_RULE);
-  cpuRunCA(cpu,rules,nLats,LATS_PER_RULE);
+    runCA(gpu,rules,nLats,LATS_PER_RULE);
+    cpuRunCA(cpu,rules,nLats,LATS_PER_RULE);
 
-  for(i=0;i<nLats;i++)
-    if(memcmp(gpu[i].cells,cpu[i].cells,LAT_SIZE)!=0)
-      diff++;
-  if(diff)
-    fprintf(stderr,"FAIL: %d of %d lattices differ between GPU and CPU\n",diff,nLats);
-  else
-    printf("GPU and CPU agree on all %d lattices\n",nLats);
+    for(i=0;i<nLats;i++)
+      if(memcmp(gpu[i].cells,cpu[i].cells,LAT_SIZE)!=0)
+        d++;
+    if(d)
+      fprintf(stderr,"FAIL: %d of %d lattices differ between GPU and CPU (%s steps)\n",d,nLats,pass ? "random" : "fixed");
+    else
+      printf("GPU and CPU agree on all %d lattices (%s steps)\n",nLats,pass ? "random" : "fixed");
+    diff += d;
+    //Fresh unbiased ICs for the second pass
+    if(pass==0)
+    {
+      srand(77);
+      createUnbiasedLattices(gpu,nLats);
+    }
+  }
   free(gpu);
   free(cpu);
   return diff==0 ? 0 : 1;

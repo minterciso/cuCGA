@@ -134,26 +134,39 @@ double uniformDeviate ( int seed )
   return seed * ( 1.0 / ( RAND_MAX + 1.0 ) );
 }
 
-void sortByFitness(Individual *ind, int n)
+unsigned int poissonDeviate(double mean)
 {
-  //Stable counting sort on fitness, which is in [0,MAX_LATS]: individuals with the same
+  double limit = exp(-mean);
+  double prod = uniformDeviate(rand());
+  unsigned int k = 0;
+  while(prod > limit)
+  {
+    k++;
+    prod *= uniformDeviate(rand());
+  }
+  return k;
+}
+
+void sortByFitness(Individual *ind, int n, int maxFitness)
+{
+  //Stable counting sort on fitness, which is in [0,maxFitness]: individuals with the same
   //fitness keep their relative order, as with the original (stable) bubble sort
-  int pos[MAX_LATS+2];
   int i,f;
+  int *pos = (int*)calloc((size_t)maxFitness+2,sizeof(int));
   Individual *tmp = (Individual*)malloc(sizeof(Individual)*(size_t)n);
 
-  if(tmp==NULL)
+  if(tmp==NULL || pos==NULL)
   {
     perror("malloc");
     exit(EXIT_FAILURE);
   }
-  memset(pos,0,sizeof(pos));
   for(i=0;i<n;i++)
     pos[ind[i].fitness+1]++;
-  for(f=1;f<=MAX_LATS+1;f++)
+  for(f=1;f<=maxFitness+1;f++)
     pos[f]+=pos[f-1];
   for(i=0;i<n;i++)
     memcpy(&tmp[pos[ind[i].fitness]++],&ind[i],sizeof(Individual));
   memcpy(ind,tmp,sizeof(Individual)*(size_t)n);
   free(tmp);
+  free(pos);
 }

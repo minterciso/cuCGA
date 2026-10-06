@@ -11,24 +11,26 @@
 #include "templates.h"
 #include "backend.h"
 
-void evaluatePopulation(Individual *pop, Lattice *lat, char *rules)
+void evaluatePopulation(Individual *pop, const Lattice *ics, Lattice *lat, char *rules)
 {
   int i,j,fixed;
+  int N = params.n_train_ics;
 
   for(i=0;i<params.population;i++)
   {
     if(params.representation!=REP_BINARY)
       decodeTemplates(&pop[i]);
-    memcpy(&lat[(size_t)i*MAX_LATS],pop[i].lat,sizeof(Lattice)*MAX_LATS);
+    //The CA runs in place, so shared ICs are copied once per individual
+    memcpy(&lat[(size_t)i*N],params.shared_ics ? ics : &ics[(size_t)i*N],sizeof(Lattice)*N);
     memcpy(&rules[(size_t)i*RULE_SIZE],pop[i].rule,RULE_SIZE);
   }
   //The whole population in a single backend call
-  runCA(lat,rules,params.population*MAX_LATS,MAX_LATS);
+  runCA(lat,rules,params.population*N,N);
   for(i=0;i<params.population;i++)
   {
     pop[i].fitness=0;
-    for(j=0;j<MAX_LATS;j++)
-      pop[i].fitness += classify(&lat[(size_t)i*MAX_LATS+j],pop[i].rule,&fixed);
+    for(j=0;j<N;j++)
+      pop[i].fitness += classify(&lat[(size_t)i*N+j],pop[i].rule,&fixed);
   }
 }
 
@@ -56,7 +58,7 @@ void validateRule(const char *rule, int nICs, double *perf, double *perfStrict)
   free(lat);
 }
 
-void evolve(Individual *pop)
+void evolve(Individual *pop, Lattice *ics)
 {
   int r,i;
   double totFit = 0;
@@ -65,7 +67,8 @@ void evolve(Individual *pop)
   FILE *csv = NULL;
   double sumSq, eliteSum, mean;
   int P = params.population;
-  Lattice *lat = (Lattice*)malloc(sizeof(Lattice)*MAX_LATS*(size_t)P);
+  int N = params.n_train_ics;
+  Lattice *lat = (Lattice*)malloc(sizeof(Lattice)*N*(size_t)P);
   char *rules = (char*)malloc((size_t)RULE_SIZE*P);
 
   if(lat==NULL || rules==NULL)
@@ -90,7 +93,7 @@ void evolve(Individual *pop)
 #endif
   for(r=0;r<params.generations;r++)
   {
-    evaluatePopulation(pop,lat,rules);
+    evaluatePopulation(pop,ics,lat,rules);
     totFit = 0.0;
     if(fp) fprintf(fp,"Run %3d:",r);
     for(i=0;i<P;i++)
@@ -98,8 +101,8 @@ void evolve(Individual *pop)
       if(fp) fprintf(fp,"%3d ",pop[i].fitness);
       totFit+=(double)pop[i].fitness;
     }
-    totFit=100.0*totFit/((double)P*MAX_LATS); //Average fitness, in % of the ICs
-    sortByFitness(pop,P);
+    totFit=100.0*totFit/((double)P*N); //Average fitness, in % of the ICs
+    sortByFitness(pop,P,N);
     bin2hex(hex,pop[P-1].rule,RULE_SIZE/4,RULE_SIZE);
     hex[RULE_SIZE/4]='\0';
     if(fp)
@@ -127,8 +130,11 @@ void evolve(Individual *pop)
     if(r==params.generations-1) break;
     crossOver(pop);
     mutate(pop,P-params.elite);
-    for(i=0;i<P;i++)
-      createRandomLattices(&pop[i]);
+    if(params.shared_ics)
+      createTrainingLattices(ics,N);
+    else
+      for(i=0;i<P;i++)
+        createTrainingLattices(&ics[(size_t)i*N],N);
   }
   if(fp) fclose(fp);
   if(csv) fclose(csv);

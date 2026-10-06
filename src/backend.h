@@ -9,7 +9,8 @@
 extern "C" {
 #endif
 
-//Runs CA_RUNS steps on nLats lattices in place; lattice t uses rule t/latsPerRule
+//Runs lat[t].steps steps (stopping early at a fixed point) on nLats lattices in place;
+//lattice t uses rule t/latsPerRule
 //(RULE_SIZE chars each) from rules
 void runCA(Lattice *lat, const char *rules, int nLats, int latsPerRule);
 

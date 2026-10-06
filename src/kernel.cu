@@ -29,8 +29,8 @@ typedef struct WarpState
 //Lane l owns the contiguous cells [l*CELLS_PER_LANE, (l+1)*CELLS_PER_LANE) and computes
 //them with a sliding window over the neighbourhood: the index of cell j is the
 //NEIGH-bit number formed by cells j-RADIUS..j+RADIUS, j-RADIUS being the most significant
-//bit (as bin2dec() in the CPU version). The warp stops at a fixed point, like the CPU
-//version, which gives the same final lattice as running all CA_RUNS steps.
+//bit (as bin2dec() in the CPU version). The warp runs lat[w].steps steps and stops early at
+//a fixed point, like the CPU version, which gives the same final lattice as running them all.
 __global__ void executeCAKernel(Lattice *lat, const char *rules, int nLats, int latsPerRule)
 {
   __shared__ WarpState state[WARPS_PER_BLOCK];
@@ -46,6 +46,7 @@ __global__ void executeCAKernel(Lattice *lat, const char *rules, int nLats, int 
   int first = lane*CELLS_PER_LANE;
   int last  = min(first+CELLS_PER_LANE, LAT_SIZE); //first >= last for idle lanes
   int cur = 0;
+  unsigned int steps = lat[w].steps;
 
   for(int j=lane;j<LAT_SIZE;j+=WARP_SIZE)
     s->cells[0][j] = (cells[j]=='1');
@@ -53,7 +54,7 @@ __global__ void executeCAKernel(Lattice *lat, const char *rules, int nLats, int 
     s->rule[k] = (rule[k]=='1');
   __syncwarp();
 
-  for(int step=0;step<CA_RUNS;step++)
+  for(unsigned int step=0;step<steps;step++)
   {
     const unsigned char *in = s->cells[cur];
     unsigned char *out = s->cells[cur^1];

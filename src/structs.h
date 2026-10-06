@@ -11,6 +11,7 @@ typedef struct Lattice
 {
   char cells[LAT_SIZE];
   unsigned int density;
+  unsigned int steps; //CA steps to run on this lattice (at most: the CA stops at a fixed point)
 }Lattice;
 
 //Ternary representation (de Oliveira & Interciso, CEC 2011): a rule is a set of
@@ -24,7 +25,6 @@ typedef struct Template
 
 typedef struct Individual
 {
-  Lattice lat[MAX_LATS];
   char rule[RULE_SIZE];        //Binary LUT run by the CA; decoded from tpl[] when using templates
   Template tpl[MAX_TEMPLATES]; //Genotype for the single/double representations
   int n_tpl;                   //Fixed at creation: crossover swaps templates one for one

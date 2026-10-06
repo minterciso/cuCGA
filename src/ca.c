@@ -4,26 +4,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include "utils.h"
+#include "params.h"
 
-void createRandomLattices(Individual *ind)
+void createTrainingLattices(Lattice *lat, int n)
 {
-  assert(ind!=NULL);
+  assert(lat!=NULL);
   int j;
   int count=0;
   int rnd=0;
 
-  for(j=0;j<MAX_LATS;j++)
+  for(j=0;j<n;j++)
   {
-    memset(ind->lat[j].cells,'0',LAT_SIZE); //We allways start with an empty Lattice
+    memset(lat[j].cells,'0',LAT_SIZE); //We allways start with an empty Lattice
 #ifndef VALIDATE
-    ind->lat[j].density = uniformDeviate(rand())*(LAT_SIZE+1); //Uniform distribution over [0,LAT_SIZE]
+    lat[j].density = uniformDeviate(rand())*(LAT_SIZE+1); //Uniform distribution over [0,LAT_SIZE]
     count=0;
-    while(count < ind->lat[j].density)
+    while(count < lat[j].density)
     {
       rnd = uniformDeviate(rand())*LAT_SIZE; //All cells have equal probability to be choosen
-      if(ind->lat[j].cells[rnd]=='0')
+      if(lat[j].cells[rnd]=='0')
       {
-        ind->lat[j].cells[rnd]='1';
+        lat[j].cells[rnd]='1';
         count++;
       }
     }
@@ -35,12 +36,14 @@ void createRandomLattices(Individual *ind)
     {
       if(uniformDeviate(rand()) < 0.5)
       {
-        ind->lat[j].cells[rnd]='1';
+        lat[j].cells[rnd]='1';
         count++;
       }
     }
-    ind->lat[j].density = count;
+    lat[j].density = count;
 #endif
+    //Drawn after the cells, and only when asked for, so the default random sequence is unchanged
+    lat[j].steps = params.poisson_steps ? poissonDeviate(POISSON_STEPS_MEAN) : CA_RUNS;
   }
 }
 
@@ -67,6 +70,7 @@ void createUnbiasedLattices(Lattice *lat, int n)
   for(i=0;i<n;i++)
   {
     lat[i].density = 0;
+    lat[i].steps = CA_RUNS;
     for(k=0;k<LAT_SIZE;k++)
     {
       lat[i].cells[k] = (uniformDeviate(rand()) < 0.5 ? '1' : '0');
@@ -107,7 +111,8 @@ void executeCA(Lattice *lat, const char *rule, int ind_idx, int th_idx)
 {
   int dif = 0;
   int pos = 0;
-  int i,j,k;
+  unsigned int i;
+  int j,k;
   char res[LAT_SIZE];
   char bin[RADIUS*2+1+1];
   int idx=0;
@@ -120,11 +125,11 @@ void executeCA(Lattice *lat, const char *rule, int ind_idx, int th_idx)
   snprintf(fname,FNAME_SIZE-1,"logs/individual%03d-%03d.log",th_idx,ind_idx);
   FILE *fp = fopen(fname,"a+");
 #endif
-  for(i=0;i<CA_RUNS;i++)
+  for(i=0;i<lat->steps;i++)
   {
     memset(res,'0',LAT_SIZE);
 #ifdef DEBUG
-    fprintf(fp,"%3d:",i);
+    fprintf(fp,"%3u:",i);
     printCA(fp,lat,1);
     fprintf(fp,"\n");
 #endif

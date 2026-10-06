@@ -18,8 +18,11 @@ int parseRule(const char *hex, char *rule);
 //Random
 int timeSeed(void);
 double uniformDeviate ( int seed );
+//Poisson(mean) deviate drawn with rand() (Knuth's multiplication method, fine for mean <~ 700)
+unsigned int poissonDeviate(double mean);
 
 //Sorters: ascending fitness, stable
-void sortByFitness(Individual *ind, int n);
+//Fitness must be in [0,maxFitness]
+void sortByFitness(Individual *ind, int n, int maxFitness);
 
 #endif //__UTILS_H

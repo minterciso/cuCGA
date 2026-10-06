@@ -12,16 +12,24 @@
 #include "params.h"
 #include "templates.h"
 
-void *start_threads(void *individual)
+typedef struct EvolveArgs
 {
-  Individual *ind = (Individual*)individual;
-  evolve(ind);
-  pthread_exit(ind);
+  Individual *pop;
+  Lattice *ics;
+}EvolveArgs;
+
+void *start_threads(void *arg)
+{
+  EvolveArgs *ea = (EvolveArgs*)arg;
+  evolve(ea->pop,ea->ics);
+  pthread_exit(ea);
 }
 
 int main(int argc, char *argv[])
 {
   Individual *population = NULL;
+  Lattice *ics = NULL;
+  EvolveArgs ea;
   pthread_t threads[1];
   char hex[RULE_SIZE/4+1];
   double perf, perfStrict;
@@ -49,15 +57,22 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
   }
 
-  //On the heap: ~15KB per individual (~150KB with VALIDATE)
-  if((population=(Individual*)calloc(params.population,sizeof(Individual)))==NULL)
+  //Training ICs: one set for the whole population, or one per individual (see evolve())
+  int N = params.n_train_ics;
+  size_t nSets = params.shared_ics ? 1 : (size_t)params.population;
+  if((population=(Individual*)calloc(params.population,sizeof(Individual)))==NULL ||
+     (ics=(Lattice*)malloc(sizeof(Lattice)*N*nSets))==NULL)
   {
     perror("calloc");
     return EXIT_FAILURE;
   }
+  if(params.shared_ics)
+    createTrainingLattices(ics,N);
   for(i=0;i<params.population;i++)
   {
-    createRandomLattices(&population[i]);
+    //Drawn interleaved with the rules, so per-individual runs keep the random sequence of earlier versions
+    if(!params.shared_ics)
+      createTrainingLattices(&ics[(size_t)i*N],N);
 #ifdef USE_BEST
     memset(population[i].rule,'0',RULE_SIZE);
     hex2bin(BEST_CGA,population[i].rule,32,RULE_SIZE);
@@ -87,18 +102,21 @@ int main(int argc, char *argv[])
       continue;
     }
     fprintf(dfp,"Individual %03d\n",i);
-    for(j=0;j<MAX_LATS;j++)
-      fprintf(dfp,"Lat %03d(%3d):%.*s\n",j,population[i].lat[j].density,LAT_SIZE,population[i].lat[j].cells);
+    Lattice *ind_ics = params.shared_ics ? ics : &ics[(size_t)i*N];
+    for(j=0;j<N;j++)
+      fprintf(dfp,"Lat %03d(%3d):%.*s\n",j,ind_ics[j].density,LAT_SIZE,ind_ics[j].cells);
     fprintf(dfp,"Rule: %.*s\n",RULE_SIZE,population[i].rule);
     fclose(dfp);
   }
 #endif
 
   //Now we run the threaded part
+  ea.pop = population;
+  ea.ics = ics;
   for(i=0;i<1;i++)
   {
     population[i].id = i; //Set before the thread starts reading the population
-    pthread_create(&threads[i],NULL,&start_threads,population);
+    pthread_create(&threads[i],NULL,&start_threads,&ea);
   }
   for(i=0;i<1;i++)
     pthread_join(threads[i],NULL);
@@ -133,5 +151,6 @@ int main(int argc, char *argv[])
          params.seed,best->fitness,hex,params.n_ics,perf,perfStrict);
 
   free(population);
+  free(ics);
   return EXIT_SUCCESS;
 }

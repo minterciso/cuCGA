@@ -9,7 +9,7 @@
 #include "utils.h"
 
 Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS,
-                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_N_ICS, NULL, NULL };
+                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_TRAIN_ICS, 0, 0, DEFAULT_N_ICS, NULL, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -29,7 +29,7 @@ static void usage(FILE *stream, const char *prog)
           "  -p, --hash-prob P       probability of '#' in each template cell, in [0,1]\n"
           "                          (default %g)\n"
           "  -g, --generations N     generations of the GA (default %d)\n"
-          "  -P, --population N      population size, 2..%d (default %d)\n"
+          "  -P, --population N      population size, at least 2 (default %d)\n"
           "  -e, --elite PCT         elite, in %% of the population, in (0,100) (default %g);\n"
           "                          rounded to the nearest individual, at least 1 and at\n"
           "                          most population-1. The elite is kept unchanged; parents\n"
@@ -37,12 +37,19 @@ static void usage(FILE *stream, const char *prog)
           "  -s, --seed N            random seed, 0..%u (default: derived from the clock)\n"
           "  -o, --csv FILE          write per-generation fitness statistics to FILE (CSV):\n"
           "                          generation,best,elite_mean,mean,std,min,best_rule\n"
-          "                          fitness = training ICs classified correctly, of %d\n"
+          "                          fitness = training ICs classified correctly, of N\n"
+          "  -I, --train-ics N       training ICs per individual per generation (default %d);\n"
+          "                          population*N must not exceed %d\n"
+          "  -S, --shared-ics        score the whole population on the same training ICs\n"
+          "                          each generation (default: each individual draws its own)\n"
+          "  -T, --poisson-steps     run each training IC for a Poisson(%d) number of steps,\n"
+          "                          drawn per IC, as MCH (default: always %d); the final\n"
+          "                          evaluation always runs %d steps\n"
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
           "  -h, --help              show this help\n",
-          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, MAX_POPULATION, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, MAX_LATS, DEFAULT_N_ICS, RULE_SIZE/4);
+          prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, DEFAULT_TRAIN_ICS, INT_MAX, POISSON_STEPS_MEAN, CA_RUNS, CA_RUNS, DEFAULT_N_ICS, RULE_SIZE/4);
 }
 
 static int parseDouble(const char *s, double min, double max, double *out)
@@ -82,6 +89,9 @@ int parseParams(int argc, char *argv[])
     {"population",     required_argument, NULL, 'P'},
     {"elite",          required_argument, NULL, 'e'},
     {"seed",           required_argument, NULL, 's'},
+    {"train-ics",      required_argument, NULL, 'I'},
+    {"shared-ics",     no_argument,       NULL, 'S'},
+    {"poisson-steps",  no_argument,       NULL, 'T'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
     {"csv",            required_argument, NULL, 'o'},
@@ -93,7 +103,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:n:v:o:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:I:STn:v:o:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -153,9 +163,9 @@ int parseParams(int argc, char *argv[])
         params.generations = (int)u;
         break;
       case 'P':
-        if(parseUInt(optarg, &u) != 0 || u < 2 || u > MAX_POPULATION)
+        if(parseUInt(optarg, &u) != 0 || u < 2 || u > INT_MAX)
         {
-          fprintf(stderr, "Invalid population '%s': expected an integer in [2,%d]\n", optarg, MAX_POPULATION);
+          fprintf(stderr, "Invalid population '%s': expected an integer of at least 2\n", optarg);
           return -1;
         }
         params.population = (int)u;
@@ -166,6 +176,20 @@ int parseParams(int argc, char *argv[])
           fprintf(stderr, "Invalid elite '%s': expected a percentage in (0,100)\n", optarg);
           return -1;
         }
+        break;
+      case 'I':
+        if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
+        {
+          fprintf(stderr, "Invalid number of training ICs '%s': expected a positive integer\n", optarg);
+          return -1;
+        }
+        params.n_train_ics = (int)u;
+        break;
+      case 'S':
+        params.shared_ics = 1;
+        break;
+      case 'T':
+        params.poisson_steps = 1;
         break;
       case 'n':
         if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
@@ -195,6 +219,13 @@ int parseParams(int argc, char *argv[])
     usage(stderr, argv[0]);
     return -1;
   }
+  //Every individual's lattices go to the backend in one call, indexed with an int
+  if((long long)params.population*params.n_train_ics > INT_MAX)
+  {
+    fprintf(stderr, "Population %d with %d training ICs gives %lld lattices per generation: at most %d are supported\n",
+            params.population, params.n_train_ics, (long long)params.population*params.n_train_ics, INT_MAX);
+    return -1;
+  }
   params.elite = (int)(params.population*params.elite_pct/100.0 + 0.5);
   if(params.elite < 1 || params.elite > params.population-1)
   {
@@ -215,6 +246,12 @@ void printParams(FILE *stream)
           params.mut_rate, params.cross_rate, REP_NAMES[params.representation]);
   if(params.representation != REP_BINARY)
     fprintf(stream, " t-max=%d hash-prob=%g", params.t_max, params.hash_prob);
-  fprintf(stream, " generations=%d population=%d elite=%g%% (%d) seed=%u ics=%d\n",
-          params.generations, params.population, params.elite_pct, params.elite, params.seed, params.n_ics);
+  fprintf(stream, " generations=%d population=%d elite=%g%% (%d) seed=%u train-ics=%d (%s)",
+          params.generations, params.population, params.elite_pct, params.elite, params.seed,
+          params.n_train_ics, params.shared_ics ? "shared" : "per individual");
+  if(params.poisson_steps)
+    fprintf(stream, " train-steps=Poisson(%d)", POISSON_STEPS_MEAN);
+  else
+    fprintf(stream, " train-steps=%d", CA_RUNS);
+  fprintf(stream, " ics=%d\n", params.n_ics);
 }

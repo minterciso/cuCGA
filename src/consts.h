@@ -5,16 +5,17 @@
 //#define VALIDATE
 
 //Structural definition (Production run)
+//DEFAULT_TRAIN_ICS is only the default of --train-ics (training ICs per generation)
 #ifndef DEBUG
 
 #ifdef VALIDATE
 #define LAT_SIZE 149
-#define MAX_LATS 1000
+#define DEFAULT_TRAIN_ICS 1000
 #endif
 
 #ifndef VALIDATE
 #define LAT_SIZE 149
-#define MAX_LATS 100
+#define DEFAULT_TRAIN_ICS 100
 #endif
 
 #define RADIUS 3
@@ -26,12 +27,12 @@
 
 #ifdef VALIDATE
 #define LAT_SIZE 149
-#define MAX_LATS 1000
+#define DEFAULT_TRAIN_ICS 1000
 #endif
 
 #ifndef VALIDATE
 #define LAT_SIZE 149
-#define MAX_LATS 10
+#define DEFAULT_TRAIN_ICS 10
 #endif
 
 #define RADIUS 3
@@ -45,7 +46,8 @@
 #define MAX_TEMPLATES 18 //Largest T_max probed in the paper
 
 //Runnable definition
-#define CA_RUNS 300
+#define CA_RUNS 300 //CA steps per IC (at most: the CA stops at a fixed point)
+#define POISSON_STEPS_MEAN 320 //MCH: training steps drawn per IC from Poisson(320) (--poisson-steps)
 #define DEFAULT_GENERATIONS 100 //Generations per GA run (--generations)
 
 //GA Probabilities (and elitism amount)
