@@ -16,8 +16,10 @@
 #   -x             do not draw the evolution plots
 #
 # Produces <outdir>/results.csv (one row per run), <outdir>/evolution.png (all
-# runs) and <outdir>/runs/seed_NNNN/ holding each run's logs/output.log, stdout,
-# stderr, evolution.csv and evolution.png. The plots need the virtual environment
+# runs), <outdir>/manifest.txt (environment, plus the effective GA parameters
+# reported by the binary, training ICs and whether they are shared included) and
+# <outdir>/runs/seed_NNNN/ holding each run's logs/output.log, stdout, stderr,
+# evolution.csv and evolution.png. The plots need the virtual environment
 # made by scripts/setup_venv.sh; without it they are skipped with a warning.
 set -euo pipefail
 export LC_ALL=C
@@ -80,18 +82,26 @@ OUT=$(realpath "$OUT")
     echo "nvcc: $(nvcc --version 2>/dev/null | tail -1 || echo n/a)"
 } > "$OUT/manifest.txt"
 
+# Training ICs reported by the binary in its parameter line (first line of stderr), so
+# that -I/--train-ics in any spelling, or its default, is what gets recorded and plotted.
+# Empty for binaries that predate -I.
+train_ics() {
+    sed -nE '1s/.* train-ics=([0-9]+) .*/\1/p' "$1"
+}
+
 run_one() {
-    local seed=$1 dir
+    local seed=$1 dir n
     dir=$(printf "%s/runs/seed_%04d" "$OUT" "$seed")
     mkdir -p "$dir/logs"
     # shellcheck disable=SC2086 # GA_ARGS is split into options on purpose
     (cd "$dir" && "$BIN" $GA_ARGS -s "$seed" -n "$ICS" --csv evolution.csv > stdout.txt 2> stderr.txt)
     if [ "$PLOT" -eq 1 ]; then
-        "$PY" "$ROOT/scripts/plot_evolution.py" run "$dir/evolution.csv" -o "$dir/evolution.png" \
+        n=$(train_ics "$dir/stderr.txt")
+        "$PY" "$ROOT/scripts/plot_evolution.py" run "$dir/evolution.csv" -o "$dir/evolution.png" ${n:+--training-ics "$n"} \
             --stdout "$dir/stdout.txt" --stderr "$dir/stderr.txt" --title "Evolution, seed $seed" > /dev/null
     fi
 }
-export -f run_one
+export -f run_one train_ics
 export OUT BIN ICS PLOT PY ROOT GA_ARGS
 
 start=$(date +%s)
@@ -104,8 +114,22 @@ for f in "$OUT"/runs/seed_*/stdout.txt; do
     sed -E 's/^seed=([0-9]+) train_best=([0-9]+) rule=([0-9a-f]+) nics=([0-9]+) perf=([0-9.]+) perf_strict=([0-9.]+)$/\1,\2,\3,\4,\5,\6/' "$f"
 done | sort -t, -k1,1n >> "$OUT/results.csv"
 
+# Effective GA parameters, as printed by the binary (identical across runs but for the seed)
+first=$(printf "%s/runs/seed_%04d/stderr.txt" "$OUT" "$FIRST_SEED")
+params=$(head -1 "$first" 2>/dev/null | sed -E 's/ seed=[0-9]+//' || true)
+N=$(train_ics "$first" 2>/dev/null || true)
+case "$params" in
+    *"(shared)"*)         SHARED=yes ;;
+    *"(per individual)"*) SHARED=no ;;
+    *)                    SHARED=n/a ;;
+esac
+{
+    echo "train ics: ${N:-n/a}  shared ics: $SHARED"
+    echo "ga params: ${params:-n/a}"
+} >> "$OUT/manifest.txt"
+
 if [ "$PLOT" -eq 1 ]; then
-    "$PY" scripts/plot_evolution.py experiment "$OUT" -o "$OUT/evolution.png" \
+    "$PY" scripts/plot_evolution.py experiment "$OUT" -o "$OUT/evolution.png" ${N:+--training-ics "$N"} \
         --title "Evolution across runs ($(basename "$OUT"))${GA_ARGS:+: $GA_ARGS}" >&2
 fi
 
