@@ -9,7 +9,7 @@
 #include "utils.h"
 
 Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS,
-                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_TRAIN_ICS, 0, 0, DEFAULT_N_ICS, NULL, NULL };
+                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_TRAIN_ICS, 0, 0, 0, DEFAULT_N_ICS, NULL, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -45,6 +45,9 @@ static void usage(FILE *stream, const char *prog)
           "  -T, --poisson-steps     run each training IC for a Poisson(%d) number of steps,\n"
           "                          drawn per IC, as MCH (default: always %d); the final\n"
           "                          evaluation always runs %d steps\n"
+          "  -L, --uniform-lambda    initial rules with a fraction of 1s (lambda) uniform\n"
+          "                          over [0,1], as MCH (default: each bit 1 with p=0.5,\n"
+          "                          so lambda is close to 0.5); binary representation only\n"
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
@@ -92,6 +95,7 @@ int parseParams(int argc, char *argv[])
     {"train-ics",      required_argument, NULL, 'I'},
     {"shared-ics",     no_argument,       NULL, 'S'},
     {"poisson-steps",  no_argument,       NULL, 'T'},
+    {"uniform-lambda", no_argument,       NULL, 'L'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
     {"csv",            required_argument, NULL, 'o'},
@@ -103,7 +107,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:I:STn:v:o:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:I:STLn:v:o:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -191,6 +195,9 @@ int parseParams(int argc, char *argv[])
       case 'T':
         params.poisson_steps = 1;
         break;
+      case 'L':
+        params.uniform_lambda = 1;
+        break;
       case 'n':
         if(parseUInt(optarg, &u) != 0 || u == 0 || u > INT_MAX)
         {
@@ -233,6 +240,11 @@ int parseParams(int argc, char *argv[])
             params.elite_pct, params.elite, params.population);
     return -1;
   }
+  if(params.uniform_lambda && params.representation != REP_BINARY)
+  {
+    fprintf(stderr, "--uniform-lambda only applies to the binary representation: the lambda of a template rule follows from its templates\n");
+    return -1;
+  }
   if(!mut_set && params.representation != REP_BINARY)
     params.mut_rate = DEFAULT_TPL_MUT_RATE;
   if(!seed_set)
@@ -246,6 +258,8 @@ void printParams(FILE *stream)
           params.mut_rate, params.cross_rate, REP_NAMES[params.representation]);
   if(params.representation != REP_BINARY)
     fprintf(stream, " t-max=%d hash-prob=%g", params.t_max, params.hash_prob);
+  else
+    fprintf(stream, " init-lambda=%s", params.uniform_lambda ? "uniform" : "binomial(0.5)");
   fprintf(stream, " generations=%d population=%d elite=%g%% (%d) seed=%u train-ics=%d (%s)",
           params.generations, params.population, params.elite_pct, params.elite, params.seed,
           params.n_train_ics, params.shared_ics ? "shared" : "per individual");

@@ -27,6 +27,7 @@ typedef struct Params
   int elite;                     //Elite size E = round(population*elite_pct/100), in [1,population-1]
   unsigned int seed;             //srand() seed; taken from the clock unless --seed is given
   int n_train_ics;               //Training ICs per individual per generation (fitness is in [0,n_train_ics])
+  int uniform_lambda;            //1: initial binary rules have a fraction of 1s uniform over [0,1] (MCH)
   int poisson_steps;             //1: each training IC runs Poisson(POISSON_STEPS_MEAN) steps instead of CA_RUNS
   int shared_ics;                //1: the whole population is scored on the same training ICs each generation
   int n_ics;                     //Binomial ICs for the final evaluation of a rule

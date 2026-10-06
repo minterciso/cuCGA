@@ -51,8 +51,26 @@ void createRandomRules(Individual *ind)
 {
   int i;
   int rnd = 0;
+  int ones, count;
 
   memset(ind->rule,'0',RULE_SIZE);
+  if(params.uniform_lambda)
+  {
+    //MCH: the fraction of 1s (lambda) is uniform over [0,1], so exactly `ones` bits, uniform
+    //on [0,RULE_SIZE], are set at distinct random positions
+    ones = uniformDeviate(rand())*(RULE_SIZE+1);
+    count = 0;
+    while(count < ones)
+    {
+      rnd = uniformDeviate(rand())*RULE_SIZE;
+      if(ind->rule[rnd]=='0')
+      {
+        ind->rule[rnd]='1';
+        count++;
+      }
+    }
+    return;
+  }
   for(i=0;i<RULE_SIZE;i++)
   {
     rnd = uniformDeviate(rand())*2;

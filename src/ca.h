@@ -8,6 +8,8 @@
 //n training ICs: density uniform on [0,LAT_SIZE] (binomial with VALIDATE); each runs CA_RUNS
 //steps, or a Poisson(POISSON_STEPS_MEAN) number of steps with --poisson-steps
 void createTrainingLattices(Lattice *lat, int n);
+//Random binary rule: each bit 1 with probability 0.5, or with --uniform-lambda a fraction of
+//1s uniform over [0,1] (MCH)
 void createRandomRules(Individual *ind);
 //Unbiased ICs: each cell is 1 with probability 0.5, so the density is Binomial(LAT_SIZE,0.5); CA_RUNS steps
 void createUnbiasedLattices(Lattice *lat, int n);
