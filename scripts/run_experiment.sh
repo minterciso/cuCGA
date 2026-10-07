@@ -13,14 +13,16 @@
 #   -a args        extra GA options passed to every run, as one quoted string,
 #                  e.g. -a "-r single -g 200"; the seed, ICs and CSV are set by
 #                  this script, so -s/-n/-o/-v (and long forms) are not allowed
-#   -x             do not draw the evolution plots
+#   -x             do not draw the evolution plots (drawn only when local
+#                  plotting tools are present)
 #
 # Produces <outdir>/results.csv (one row per run), <outdir>/evolution.png (all
 # runs), <outdir>/manifest.txt (environment, plus the effective GA parameters
 # reported by the binary, training ICs and whether they are shared included) and
 # <outdir>/runs/seed_NNNN/ holding each run's logs/output.log, stdout, stderr,
-# evolution.csv and evolution.png. The plots need the virtual environment
-# made by scripts/setup_venv.sh; without it they are skipped with a warning.
+# evolution.csv and evolution.png. The plots need local plotting tools (.venv
+# and scripts/plot_evolution.py), which are not part of this repository;
+# without them they are skipped with a warning.
 set -euo pipefail
 export LC_ALL=C
 
@@ -65,8 +67,8 @@ if [ -z "$BIN" ]; then
 fi
 BIN=$(realpath "$BIN")
 PY="$ROOT/.venv/bin/python"
-if [ "$PLOT" -eq 1 ] && [ ! -x "$PY" ]; then
-    echo "warning: $ROOT/.venv not found, no plots (run scripts/setup_venv.sh)" >&2
+if [ "$PLOT" -eq 1 ] && { [ ! -x "$PY" ] || [ ! -f "$ROOT/scripts/plot_evolution.py" ]; }; then
+    echo "warning: local plotting tools not found (.venv, scripts/plot_evolution.py), no plots" >&2
     PLOT=0
 fi
 mkdir -p "$OUT/runs"
