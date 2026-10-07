@@ -2,7 +2,9 @@
 
 Here you'll  find the source code used to test a GA for the CA problem known as DCT.
 
-This is the source code for the IEEE paper [Ternary representation improves the search for binary, one-dimensional density classifier cellular automata](https://ieeexplore.ieee.org/document/5949850) developed by myself and my masters teacher and coleague Pedro Paulo Balbi de Oliveira.
+This is the source code for the IEEE paper [Ternary representation improves the search for binary, one-dimensional density classifier cellular automata](https://ieeexplore.ieee.org/document/5949850) developed by myself and my masters teacher and coleague Pedro Paulo Balbi de Oliveira. As well as improvements on the same paper and GA.
+
+> **Paper version.** The code published for the paper is tagged [`cec2011-paper`](https://github.com/minterciso/cuCGA/tree/cec2011-paper) (commit `6390aa3`). Later commits fix bugs found in that version, move the build to CMake and add options, so results produced with later commits are not directly comparable with the paper's.
 
 More documentation to follow
 
