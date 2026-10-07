@@ -9,7 +9,7 @@
 #include "utils.h"
 
 Params params = { DEFAULT_MUT_RATE, DEFAULT_CROSS_RATE, REP_BINARY, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS,
-                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_TRAIN_ICS, 0, 0, 0, DEFAULT_N_ICS, NULL, NULL };
+                  DEFAULT_POPULATION, DEFAULT_ELITE_PCT, 0, 0, DEFAULT_TRAIN_ICS, 0, 0, 0, DEFAULT_N_ICS, NULL, NULL, NULL };
 
 static const char *REP_NAMES[] = { "binary", "single", "double" };
 
@@ -51,6 +51,9 @@ static void usage(FILE *stream, const char *prog)
           "  -n, --ics N             binomial ICs for the final evaluation (default %d)\n"
           "  -v, --validate HEX      only evaluate the given %d-digit hex rule (neighbourhood\n"
           "                          0000000 first, as in MCH/CMD) on N binomial ICs, no GA\n"
+          "  -V, --validate-file F   as -v for every rule in file F (one hex rule per line;\n"
+          "                          blank lines and lines starting with # are skipped), all\n"
+          "                          on the same N ICs; prints CSV rule,nics,seed,perf,perf_strict\n"
           "  -h, --help              show this help\n",
           prog, DEFAULT_MUT_RATE, DEFAULT_TPL_MUT_RATE, DEFAULT_CROSS_RATE, MAX_TEMPLATES, DEFAULT_T_MAX, DEFAULT_HASH_PROB, DEFAULT_GENERATIONS, DEFAULT_POPULATION, DEFAULT_ELITE_PCT, UINT_MAX, DEFAULT_TRAIN_ICS, INT_MAX, POISSON_STEPS_MEAN, CA_RUNS, CA_RUNS, DEFAULT_N_ICS, RULE_SIZE/4);
 }
@@ -98,6 +101,7 @@ int parseParams(int argc, char *argv[])
     {"uniform-lambda", no_argument,       NULL, 'L'},
     {"ics",            required_argument, NULL, 'n'},
     {"validate",       required_argument, NULL, 'v'},
+    {"validate-file",  required_argument, NULL, 'V'},
     {"csv",            required_argument, NULL, 'o'},
     {"help",           no_argument,       NULL, 'h'},
     {NULL, 0, NULL, 0}
@@ -107,7 +111,7 @@ int parseParams(int argc, char *argv[])
   int mut_set = 0;
   unsigned int u;
 
-  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:I:STLn:v:o:h", opts, NULL)) != -1)
+  while((opt = getopt_long(argc, argv, "m:c:r:t:p:g:P:e:s:I:STLn:v:V:o:h", opts, NULL)) != -1)
   {
     switch(opt)
     {
@@ -209,6 +213,9 @@ int parseParams(int argc, char *argv[])
       case 'v':
         params.validate_hex = optarg;
         break;
+      case 'V':
+        params.validate_file = optarg;
+        break;
       case 'o':
         params.csv_path = optarg;
         break;
@@ -224,6 +231,11 @@ int parseParams(int argc, char *argv[])
   {
     fprintf(stderr, "Unexpected argument '%s'\n", argv[optind]);
     usage(stderr, argv[0]);
+    return -1;
+  }
+  if(params.validate_hex != NULL && params.validate_file != NULL)
+  {
+    fprintf(stderr, "--validate and --validate-file are mutually exclusive\n");
     return -1;
   }
   //Every individual's lattices go to the backend in one call, indexed with an int

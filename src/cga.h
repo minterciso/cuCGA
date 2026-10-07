@@ -19,5 +19,8 @@ void evaluatePopulation(Individual *pop, const Lattice *ics, Lattice *lat, char 
 //step count can be random with --poisson-steps; the final evaluation always uses CA_RUNS);
 //perfStrict additionally requires that state to be a fixed point of the rule.
 void validateRule(const char *rule, int nICs, double *perf, double *perfStrict);
+//Same for nRules rules (RULE_SIZE chars each, back to back), all on the same nICs ICs; perf and
+//perfStrict get one value per rule. With nRules=1 it is exactly validateRule().
+void validateRules(const char *rules, int nRules, int nICs, double *perf, double *perfStrict);
 
 #endif //__CGA_H

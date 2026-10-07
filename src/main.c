@@ -25,6 +25,71 @@ void *start_threads(void *arg)
   pthread_exit(ea);
 }
 
+//-V: one hex rule per line (blank lines and #-comments skipped); CSV to stdout
+static int validateFile(const char *path)
+{
+  FILE *fp = fopen(path,"r");
+  char line[256];
+  char *rules = NULL, *hexes = NULL;
+  double *perf, *perfStrict;
+  int n = 0, cap = 0, i, lineNo = 0;
+  size_t len;
+
+  if(fp==NULL)
+  {
+    perror(path);
+    return EXIT_FAILURE;
+  }
+  while(fgets(line,sizeof(line),fp)!=NULL)
+  {
+    lineNo++;
+    len = strcspn(line," \t\r\n");
+    line[len] = '\0';
+    if(len==0 || line[0]=='#')
+      continue;
+    if(n==cap)
+    {
+      cap = cap ? 2*cap : 1024;
+      rules = (char*)realloc(rules,(size_t)cap*RULE_SIZE);
+      hexes = (char*)realloc(hexes,(size_t)cap*(RULE_SIZE/4+1));
+      if(rules==NULL || hexes==NULL)
+      {
+        perror("realloc");
+        return EXIT_FAILURE;
+      }
+    }
+    if(len!=RULE_SIZE/4 || !parseRule(line,&rules[(size_t)n*RULE_SIZE]))
+    {
+      fprintf(stderr,"%s:%d: invalid rule '%s': expected %d hex digits\n",path,lineNo,line,RULE_SIZE/4);
+      return EXIT_FAILURE;
+    }
+    memcpy(&hexes[(size_t)n*(RULE_SIZE/4+1)],line,RULE_SIZE/4+1);
+    n++;
+  }
+  fclose(fp);
+  if(n==0)
+  {
+    fprintf(stderr,"%s: no rules\n",path);
+    return EXIT_FAILURE;
+  }
+  perf = (double*)malloc(sizeof(double)*n);
+  perfStrict = (double*)malloc(sizeof(double)*n);
+  if(perf==NULL || perfStrict==NULL)
+  {
+    perror("malloc");
+    return EXIT_FAILURE;
+  }
+  validateRules(rules,n,params.n_ics,perf,perfStrict);
+  printf("rule,nics,seed,perf,perf_strict\n");
+  for(i=0;i<n;i++)
+    printf("%s,%d,%u,%.6f,%.6f\n",&hexes[(size_t)i*(RULE_SIZE/4+1)],params.n_ics,params.seed,perf[i],perfStrict[i]);
+  free(rules);
+  free(hexes);
+  free(perf);
+  free(perfStrict);
+  return EXIT_SUCCESS;
+}
+
 int main(int argc, char *argv[])
 {
   Individual *population = NULL;
@@ -42,6 +107,10 @@ int main(int argc, char *argv[])
   }
   printParams(stderr);
   srand(params.seed);
+
+  //Only evaluate the rules of a file, all on the same ICs
+  if(params.validate_file!=NULL)
+    return validateFile(params.validate_file);
 
   //Only evaluate a given rule
   if(params.validate_hex!=NULL)

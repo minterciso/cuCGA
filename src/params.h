@@ -33,6 +33,7 @@ typedef struct Params
   int n_ics;                     //Binomial ICs for the final evaluation of a rule
   const char *validate_hex;      //When set, only evaluate this rule (hex, MCH order), no GA
   const char *csv_path;          //When set, per-generation fitness statistics are written there as CSV
+  const char *validate_file;     //When set, only evaluate the rules listed in this file (one hex per line), no GA
 }Params;
 
 extern Params params;

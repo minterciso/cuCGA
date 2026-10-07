@@ -36,25 +36,48 @@ void evaluatePopulation(Individual *pop, const Lattice *ics, Lattice *lat, char 
 
 void validateRule(const char *rule, int nICs, double *perf, double *perfStrict)
 {
-  int j,ok=0,okStrict=0,fixed=0;
-  Lattice *lat = (Lattice*)malloc(sizeof(Lattice)*nICs);
-  if(lat==NULL)
+  validateRules(rule,1,nICs,perf,perfStrict);
+}
+
+//Lattices per backend call when validating many rules (~300MB of Lattice)
+#define VALIDATE_CHUNK_LATS (1<<21)
+
+void validateRules(const char *rules, int nRules, int nICs, double *perf, double *perfStrict)
+{
+  int r0,k,j,c,ok,okStrict,fixed=0;
+  int chunk = nICs >= VALIDATE_CHUNK_LATS ? 1 : VALIDATE_CHUNK_LATS/nICs;
+  if(chunk > nRules) chunk = nRules;
+  Lattice *ics = (Lattice*)malloc(sizeof(Lattice)*nICs);
+  Lattice *lat = (Lattice*)malloc(sizeof(Lattice)*nICs*(size_t)chunk);
+  if(ics==NULL || lat==NULL)
   {
     perror("malloc");
     exit(EXIT_FAILURE);
   }
-  createUnbiasedLattices(lat,nICs);
-  runCA(lat,rule,nICs,nICs);
-  for(j=0;j<nICs;j++)
+  //One IC set for every rule; the CA runs in place, so each rule gets a copy
+  createUnbiasedLattices(ics,nICs);
+  for(r0=0;r0<nRules;r0+=chunk)
   {
-    if(classify(&lat[j],rule,&fixed))
+    c = (nRules-r0 < chunk) ? nRules-r0 : chunk;
+    for(k=0;k<c;k++)
+      memcpy(&lat[(size_t)k*nICs],ics,sizeof(Lattice)*nICs);
+    runCA(lat,&rules[(size_t)r0*RULE_SIZE],c*nICs,nICs);
+    for(k=0;k<c;k++)
     {
-      ok++;
-      okStrict += fixed;
+      ok = okStrict = 0;
+      for(j=0;j<nICs;j++)
+      {
+        if(classify(&lat[(size_t)k*nICs+j],&rules[(size_t)(r0+k)*RULE_SIZE],&fixed))
+        {
+          ok++;
+          okStrict += fixed;
+        }
+      }
+      perf[r0+k]       = (double)ok/nICs;
+      perfStrict[r0+k] = (double)okStrict/nICs;
     }
   }
-  *perf       = (double)ok/nICs;
-  *perfStrict = (double)okStrict/nICs;
+  free(ics);
   free(lat);
 }
 
