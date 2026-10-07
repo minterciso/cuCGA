@@ -5,7 +5,8 @@
 # Usage: scripts/run_experiment.sh [-n runs] [-s first_seed] [-j jobs] [-b binary] [-i ics] [-o outdir] [-a args] [-x]
 #   -n runs        number of executions (default 100)
 #   -s first_seed  seeds used are first_seed .. first_seed+runs-1 (default 1)
-#   -j jobs        executions run concurrently (default 4)
+#   -j jobs        executions run concurrently (default: CPU threads - 2, at
+#                  least 1, which leaves two threads free for the desktop)
 #   -b binary      GA binary (default build/cuCga or build/cga, whichever this
 #                  repository builds; built with CMake if missing)
 #   -i ics         binomial ICs for the final evaluation (default 10000)
@@ -28,7 +29,8 @@ export LC_ALL=C
 
 RUNS=100
 FIRST_SEED=1
-JOBS=4
+THREADS=$(nproc 2>/dev/null || echo 4)
+JOBS=$(( THREADS > 2 ? THREADS - 2 : 1 ))
 BIN=""
 ICS=10000
 OUT=""
